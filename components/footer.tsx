@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Scissors, Instagram, Phone, Mail, MapPin } from 'lucide-react'
+import { Scissors, Globe, Phone, Mail, MapPin } from 'lucide-react'
 
 export function Footer() {
   return (
@@ -33,7 +33,7 @@ export function Footer() {
             <li className="flex items-center gap-2"><MapPin className="w-4 h-4 flex-shrink-0" /> Fortaleza, CE</li>
             <li className="flex items-center gap-2"><Phone className="w-4 h-4 flex-shrink-0" /> (85) 99999-0000</li>
             <li className="flex items-center gap-2"><Mail className="w-4 h-4 flex-shrink-0" /> contato@espacoela.com.br</li>
-            <li className="flex items-center gap-2"><Instagram className="w-4 h-4 flex-shrink-0" /> @espacoela.for</li>
+            <li className="flex items-center gap-2"><Globe className="w-4 h-4 flex-shrink-0" /> @espacoela.for</li>
           </ul>
         </div>
       </div>
