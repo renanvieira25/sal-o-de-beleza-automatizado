@@ -83,6 +83,7 @@ export function BookingRoom({ spaces, userId }: Props) {
             />
             <TimelineGrid
               spaces={spaces}
+              date={date}
               selectedChairId={selectedChairId}
               selectedRange={selectedRange}
               getHourStatus={getHourStatus}

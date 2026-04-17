@@ -4,11 +4,13 @@ import type { Space } from '@/types'
 import type { HourStatus } from '@/hooks/useAvailability'
 import type { BookingSlot } from '@/hooks/useBookings'
 import { formatCurrency } from '@/lib/utils'
+import { getPriceTier, getPriceForHour, TIER_CONFIG } from '@/lib/pricing'
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8)
 
 interface Props {
   spaces: Space[]
+  date: Date
   selectedChairId: string | null
   selectedRange: { start: number; end: number } | null
   getHourStatus: (spaceId: string, hour: number) => HourStatus
@@ -20,7 +22,7 @@ interface Props {
 interface DragState { chairId: string; start: number; end: number }
 
 export function TimelineGrid({
-  spaces, selectedChairId, selectedRange,
+  spaces, date, selectedChairId, selectedRange,
   getHourStatus, getOccupyingBooking, onSelectRange, onClear,
 }: Props) {
   const [dragVisual, setDragVisual] = useState<DragState | null>(null)
@@ -111,26 +113,35 @@ export function TimelineGrid({
                 const inDrag = isInDrag(space.id, h)
                 const showTip = tooltip?.chairId === space.id && tooltip?.hour === h
 
+                const tier    = getPriceTier(date, h)
+                const tierCfg = TIER_CONFIG[tier]
+                const hourPrice = getPriceForHour(date, h)
+
                 let bg = 'white'
                 if (inSel || inDrag) bg = 'linear-gradient(135deg, #e91e8c 0%, #c9187a 100%)'
+                else if (status === 'free')     bg = tierCfg.bg
                 else if (status === 'occupied') bg = '#fce4f3'
-                else if (status === 'blocked') bg = 'repeating-linear-gradient(45deg,#e5e5e5,#e5e5e5 3px,#f5f5f5 3px,#f5f5f5 9px)'
-                else if (status === 'past') bg = '#f3f3f3'
+                else if (status === 'blocked')  bg = 'repeating-linear-gradient(45deg,#e5e5e5,#e5e5e5 3px,#f5f5f5 3px,#f5f5f5 9px)'
+                else if (status === 'past')     bg = '#f3f3f3'
 
                 return (
                   <div
                     key={h}
                     className={`relative flex-1 h-11 border-r border-[#ede4e4] last:border-r-0 transition-colors duration-100 group ${
-                      status === 'free' && !inSel ? 'hover:bg-green-50 cursor-pointer' : ''
+                      status === 'free' && !inSel ? 'cursor-pointer' : ''
                     } ${status !== 'free' && !inSel ? 'cursor-default' : ''}`}
                     style={{ background: bg }}
                     onMouseDown={() => handleMouseDown(space.id, h, status)}
                     onMouseEnter={() => { handleMouseEnter(space.id, h); setTooltip({ chairId: space.id, hour: h }) }}
                     onMouseLeave={() => setTooltip(null)}
                   >
-                    {/* Free: dashed border on hover */}
+                    {/* Free: tier price label */}
                     {status === 'free' && !inSel && !inDrag && (
-                      <div className="absolute inset-0 border-2 border-dashed border-transparent group-hover:border-green-300 transition-colors duration-100 pointer-events-none" />
+                      <div className="absolute inset-0 flex items-end justify-center pb-0.5 pointer-events-none">
+                        <span className="text-[9px] font-semibold opacity-60" style={{ color: tierCfg.color }}>
+                          R${hourPrice}
+                        </span>
+                      </div>
                     )}
 
                     {/* Occupied label */}
@@ -149,12 +160,14 @@ export function TimelineGrid({
 
                     {/* Tooltip */}
                     {showTip && (
-                      <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white text-[10px] px-2.5 py-1.5 rounded-lg whitespace-nowrap z-30 pointer-events-none shadow-lg">
+                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white text-[10px] px-2.5 py-1.5 rounded-lg whitespace-nowrap z-30 pointer-events-none shadow-lg">
                         {String(h).padStart(2,'0')}:00–{String(h+1).padStart(2,'0')}:00
-                        {status === 'free' && <span className="text-green-300"> · {formatCurrency(25)}</span>}
-                        {status === 'occupied' && booking && <span className="text-red-300"> · Ocupado</span>}
-                        {status === 'blocked' && <span className="text-gray-300"> · Bloqueado</span>}
-                        {status === 'past' && <span className="text-gray-400"> · Passado</span>}
+                        {status === 'free' && (
+                          <span style={{ color: tierCfg.color }}> · {tierCfg.label} · {formatCurrency(hourPrice)}</span>
+                        )}
+                        {status === 'occupied' && <span className="text-red-300"> · Ocupado</span>}
+                        {status === 'blocked'  && <span className="text-gray-300"> · Bloqueado</span>}
+                        {status === 'past'     && <span className="text-gray-400"> · Passado</span>}
                         <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#1a1a1a] rotate-45" />
                       </div>
                     )}

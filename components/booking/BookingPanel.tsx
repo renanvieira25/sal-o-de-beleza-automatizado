@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
+import { calcBookingPrice, TIER_CONFIG } from '@/lib/pricing'
 import type { Space } from '@/types'
 
 interface Props {
@@ -18,11 +19,6 @@ interface Props {
   onClear: () => void
 }
 
-function calcBooking(hours: number): { price: number; type: string; bookingType: string } {
-  if (hours >= 12) return { price: 120, type: 'Diária (08h–20h)', bookingType: 'daily' }
-  return { price: 25 * hours, type: `${hours}× R$25/h`, bookingType: 'hourly' }
-}
-
 export function BookingPanel({ space, date, range, userId, onConfirmed, onClear }: Props) {
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
@@ -31,7 +27,7 @@ export function BookingPanel({ space, date, range, userId, onConfirmed, onClear 
   const [notes, setNotes] = useState('')
 
   const hours = range ? range.end - range.start : 0
-  const { price, type, bookingType } = calcBooking(hours)
+  const calc = range && hours > 0 ? calcBookingPrice(date, range.start, range.end) : null
   const hasSelection = !!(space && range && hours > 0)
 
   async function handleConfirm() {
@@ -47,9 +43,9 @@ export function BookingPanel({ space, date, range, userId, onConfirmed, onClear 
       user_id:        userId,
       start_datetime: start.toISOString(),
       end_datetime:   end.toISOString(),
-      booking_type:   bookingType,
+      booking_type:   calc!.bookingType,
       status:         'pending',
-      total_price:    price,
+      total_price:    calc!.total,
       notes:          notes || null,
     }).select('id').single()
 
@@ -126,14 +122,29 @@ export function BookingPanel({ space, date, range, userId, onConfirmed, onClear 
             </div>
 
             {/* Price */}
-            <div className="border-t border-[#ede4e4] pt-3 space-y-1">
-              <p className="text-xs text-[#7a6b6b]">{type}</p>
-              <div className="flex items-baseline gap-1.5">
+            <div className="border-t border-[#ede4e4] pt-3 space-y-2">
+              {/* Tier breakdown */}
+              {calc && calc.breakdown.map(b => (
+                <div key={b.tier} className="flex justify-between text-xs">
+                  <span style={{ color: TIER_CONFIG[b.tier].color }} className="font-medium">
+                    {TIER_CONFIG[b.tier].label} · {b.hours}h × {formatCurrency(TIER_CONFIG[b.tier].price)}
+                  </span>
+                  <span className="text-[#1a1a1a]">{formatCurrency(b.subtotal)}</span>
+                </div>
+              ))}
+              {calc && calc.discountPct > 0 && (
+                <div className="flex justify-between text-xs text-green-600">
+                  <span>Desconto diária ({calc.discountPct}%)</span>
+                  <span>−{formatCurrency(calc.discountAmt)}</span>
+                </div>
+              )}
+              <div className="flex items-baseline gap-1.5 pt-1">
                 <DollarSign className="w-5 h-5 text-[#e91e8c] flex-shrink-0" />
                 <span className="font-playfair text-3xl font-bold text-[#e91e8c]">
-                  {formatCurrency(price)}
+                  {formatCurrency(calc?.total ?? 0)}
                 </span>
               </div>
+              <p className="text-xs text-[#7a6b6b]">{calc?.label}</p>
             </div>
 
             {/* Notes */}
