@@ -1,6 +1,9 @@
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
+-- ─── ENABLE btree_gist for EXCLUDE constraint (deve vir antes de bookings) ────
+create extension if not exists btree_gist;
+
 -- ─── SPACES ───────────────────────────────────────────────────────────────────
 create table if not exists spaces (
   id          uuid primary key default uuid_generate_v4(),
@@ -59,9 +62,6 @@ create table if not exists blocked_periods (
   reason         text,
   created_at     timestamptz not null default now()
 );
-
--- ─── ENABLE btree_gist for EXCLUDE constraint ─────────────────────────────────
-create extension if not exists btree_gist;
 
 -- ─── ROW LEVEL SECURITY ───────────────────────────────────────────────────────
 alter table spaces enable row level security;
