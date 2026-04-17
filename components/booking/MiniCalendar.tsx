@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   addMonths, subMonths, format,
   startOfMonth, endOfMonth, eachDayOfInterval,
@@ -7,6 +7,7 @@ import {
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import { useAvailability } from '@/hooks/useAvailability'
 import type { BookingSlot } from '@/hooks/useBookings'
 import type { Space } from '@/types'
@@ -14,19 +15,32 @@ import type { Space } from '@/types'
 interface Props {
   selected: Date
   onSelect: (date: Date) => void
-  monthBookings: BookingSlot[]
   spaces: Space[]
 }
 
-export function MiniCalendar({ selected, onSelect, monthBookings, spaces }: Props) {
+export function MiniCalendar({ selected, onSelect, spaces }: Props) {
   const [viewMonth, setViewMonth] = useState(() => new Date())
+  const [monthBookings, setMonthBookings] = useState<BookingSlot[]>([])
+  const supabase = useRef(createClient()).current
   const { getDayStatus } = useAvailability([], [], viewMonth)
+
+  useEffect(() => {
+    const start = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1)
+    const end   = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0, 23, 59, 59)
+    supabase.from('bookings')
+      .select('id, space_id, start_datetime, end_datetime, status')
+      .gte('start_datetime', start.toISOString())
+      .lte('start_datetime', end.toISOString())
+      .not('status', 'in', '("cancelled","late_cancelled")')
+      .then(({ data }) => setMonthBookings((data as BookingSlot[]) ?? []))
+  }, [`${viewMonth.getFullYear()}-${viewMonth.getMonth()}`])
 
   const days = eachDayOfInterval({ start: startOfMonth(viewMonth), end: endOfMonth(viewMonth) })
   const padStart = getDay(startOfMonth(viewMonth))
   const cells: (Date | null)[] = [...Array(padStart).fill(null), ...days]
 
   function dayDot(d: Date): string {
+    if (spaces.length === 0) return 'bg-green-400'
     const statuses = spaces.map(s => getDayStatus(s.id, d, monthBookings))
     const busy    = statuses.filter(s => s === 'busy').length
     const partial = statuses.filter(s => s === 'partial').length
@@ -35,7 +49,7 @@ export function MiniCalendar({ selected, onSelect, monthBookings, spaces }: Prop
     return 'bg-green-400'
   }
 
-  const isPast = (d: Date) => { const t = new Date(); t.setHours(0,0,0,0); return d < t }
+  const isPast = (d: Date) => { const t = new Date(); t.setHours(0, 0, 0, 0); return d < t }
 
   return (
     <div className="space-y-3">

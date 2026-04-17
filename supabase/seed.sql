@@ -20,10 +20,12 @@ insert into spaces (id, name, description, amenities) values
 on conflict (id) do nothing;
 
 -- ─── DEMO BOOKINGS (execute APÓS criar o usuário admin) ──────────────────────
--- Popula reservas de demonstração para hoje e os próximos 3 dias.
--- Cadeira 1: ocupada 09–11 e 14–16 hoje
--- Cadeira 2: ocupada 08–12 hoje
--- Cadeira 3: livre hoje (para mostrar os 3 estados)
+-- Resultado visual:
+--   Hoje       → Cadeira 1 parcial (10–12h), Cadeira 2 parcial (14–16h), Cadeira 3 livre
+--   +2 dias    → Cadeira 1 parcial (09–11h)
+--   +5 dias    → Cadeira 2 parcial (13–15h)
+--   +8 dias    → Cadeira 1 parcial (10–12h), Cadeira 3 parcial (15–17h)
+--   Demais dias → verdes (livres)
 DO $$
 DECLARE
   demo_uid uuid;
@@ -34,37 +36,37 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Limpa demos anteriores para poder re-executar com segurança
   DELETE FROM bookings WHERE notes = '[DEMO]';
 
   INSERT INTO bookings (space_id, user_id, start_datetime, end_datetime, booking_type, status, total_price, notes) VALUES
-    -- Hoje: Cadeira 1 — 09h–11h
+    -- Hoje: Cadeira 1 — 10h–12h (parcial)
     ('a1000000-0000-0000-0000-000000000001', demo_uid,
-     (CURRENT_DATE + interval '9 hours'), (CURRENT_DATE + interval '11 hours'),
+     (CURRENT_DATE + interval '10 hours'), (CURRENT_DATE + interval '12 hours'),
      'hourly', 'confirmed', 50.00, '[DEMO]'),
-    -- Hoje: Cadeira 1 — 14h–16h
-    ('a1000000-0000-0000-0000-000000000001', demo_uid,
+    -- Hoje: Cadeira 2 — 14h–16h (parcial)
+    ('a1000000-0000-0000-0000-000000000002', demo_uid,
      (CURRENT_DATE + interval '14 hours'), (CURRENT_DATE + interval '16 hours'),
      'hourly', 'confirmed', 50.00, '[DEMO]'),
-    -- Hoje: Cadeira 2 — 08h–12h
-    ('a1000000-0000-0000-0000-000000000002', demo_uid,
-     (CURRENT_DATE + interval '8 hours'), (CURRENT_DATE + interval '12 hours'),
-     'hourly', 'confirmed', 100.00, '[DEMO]'),
-    -- Amanhã: Cadeira 1 — 10h–14h
+    -- +2 dias: Cadeira 1 — 09h–11h
     ('a1000000-0000-0000-0000-000000000001', demo_uid,
-     (CURRENT_DATE + interval '1 day' + interval '10 hours'),
-     (CURRENT_DATE + interval '1 day' + interval '14 hours'),
-     'hourly', 'confirmed', 100.00, '[DEMO]'),
-    -- Amanhã: Cadeira 2 — 13h–17h
+     (CURRENT_DATE + interval '2 days' + interval '9 hours'),
+     (CURRENT_DATE + interval '2 days' + interval '11 hours'),
+     'hourly', 'confirmed', 50.00, '[DEMO]'),
+    -- +5 dias: Cadeira 2 — 13h–15h
     ('a1000000-0000-0000-0000-000000000002', demo_uid,
-     (CURRENT_DATE + interval '1 day' + interval '13 hours'),
-     (CURRENT_DATE + interval '1 day' + interval '17 hours'),
-     'hourly', 'confirmed', 100.00, '[DEMO]'),
-    -- Depois de amanhã: Cadeira 3 — diária completa
+     (CURRENT_DATE + interval '5 days' + interval '13 hours'),
+     (CURRENT_DATE + interval '5 days' + interval '15 hours'),
+     'hourly', 'confirmed', 50.00, '[DEMO]'),
+    -- +8 dias: Cadeira 1 — 10h–12h
+    ('a1000000-0000-0000-0000-000000000001', demo_uid,
+     (CURRENT_DATE + interval '8 days' + interval '10 hours'),
+     (CURRENT_DATE + interval '8 days' + interval '12 hours'),
+     'hourly', 'confirmed', 50.00, '[DEMO]'),
+    -- +8 dias: Cadeira 3 — 15h–17h
     ('a1000000-0000-0000-0000-000000000003', demo_uid,
-     (CURRENT_DATE + interval '2 days' + interval '8 hours'),
-     (CURRENT_DATE + interval '2 days' + interval '20 hours'),
-     'daily', 'confirmed', 120.00, '[DEMO]');
+     (CURRENT_DATE + interval '8 days' + interval '15 hours'),
+     (CURRENT_DATE + interval '8 days' + interval '17 hours'),
+     'hourly', 'confirmed', 50.00, '[DEMO]');
 
   RAISE NOTICE 'Seed de demo inserido com sucesso.';
 END $$;

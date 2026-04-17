@@ -62,7 +62,6 @@ export function BookingRoom({ spaces, userId }: Props) {
         <MiniCalendar
           selected={date}
           onSelect={handleDateChange}
-          monthBookings={monthBookings}
           spaces={spaces}
         />
       </div>
